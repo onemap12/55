@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Phase 4: Entity Validators
+    function isValidFile(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 255 &&
+             data.size is number && data.size > 0 &&
+             data.ownerId == request.auth.uid &&
+             data.storagePath is string && data.storagePath.size() > 0 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidUser(data) {
+      return data.email is string && data.email.size() > 0 &&
+             (data.keys().hasOnly(['displayName', 'email', 'storageUsed']) || data.keys().hasOnly(['email', 'storageUsed']));
+    }
+
+    // 1. Files Collection
+    match /files/{fileId} {
+      allow get: if isSignedIn() && (isOwner(existing().ownerId) || existing().isPublic == true);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.isPublic == true);
+      
+      allow create: if isSignedIn() && isValidId(fileId) && isValidFile(incoming());
+      
+      allow update: if isOwner(existing().ownerId) && 
+                      incoming().ownerId == existing().ownerId &&
+                      incoming().size == existing().size &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().storagePath == existing().storagePath &&
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'isPublic', 'downloadUrl']));
+      
+      allow delete: if isOwner(existing().ownerId);
+    }
+
+    // 2. Users Collection
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && 
+                      incoming().email == existing().email &&
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'storageUsed']));
+    }
+  }
+}

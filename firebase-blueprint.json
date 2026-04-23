@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "File": {
+      "title": "File Metadata",
+      "description": "Metadata for uploaded and shared files.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The original name of the file."
+        },
+        "size": {
+          "type": "number",
+          "description": "The size of the file in bytes."
+        },
+        "type": {
+          "type": "string",
+          "description": "The MIME type of the file."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who uploaded the file."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "The path to the file in Firebase Storage."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "description": "The public download URL for the file."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the file was uploaded."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether the file can be accessed without authentication."
+        }
+      },
+      "required": ["name", "size", "ownerId", "storagePath", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Basic user information and statistics.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "storageUsed": {
+          "type": "number"
+        }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/files/{fileId}": {
+      "schema": "File",
+      "description": "Uploaded files metadata."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and settings."
+    }
+  }
+}
